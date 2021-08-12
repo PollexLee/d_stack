@@ -286,6 +286,7 @@ class DNavigatorManager {
       return Future.value('已经是首页，不再出栈');
     }
     // todo 测试params中获取[result]
+    // test
     _navigator!.pop(params != null ? params['result'] : null);
     // _navigator!.pop(DStackPopResult<dynamic>(animated: animated, result: (params != null ? params['result'] : null)));
     return Future.value(true);
