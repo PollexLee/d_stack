@@ -287,7 +287,7 @@ class DNavigatorManager {
     }
     // todo 测试params中获取[result]
     // test
-    _navigator!.pop(params != null ? params['result'] : null);
+    _navigator!.maybePop(params != null ? params['result'] : null);
     // _navigator!.pop(DStackPopResult<dynamic>(animated: animated, result: (params != null ? params['result'] : null)));
     return Future.value(true);
   }
