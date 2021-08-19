@@ -4,16 +4,12 @@ import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
-
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-
 import io.flutter.embedding.android.FlutterActivity;
-import io.flutter.embedding.android.FlutterActivityLaunchConfigs;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterEngineCache;
-import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.plugin.common.MethodChannel;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import tal.com.d_stack.channel.DStackMethodHandler;
 import tal.com.d_stack.node.DNode;
 import tal.com.d_stack.node.DNodeManager;
@@ -25,6 +21,8 @@ import tal.com.d_stack.observer.FilterActivityManager;
 import tal.com.d_stack.router.INativeRouter;
 import tal.com.d_stack.router.INodeOperation;
 import tal.com.d_stack.utils.DLog;
+
+
 
 /**
  * DStack入口类
@@ -81,13 +79,13 @@ public class DStack {
 
         initMethodChannel(engine);
         setNativeRouter(nativeRouter);
-        registerAppLifecycleObserver(context);
+        // registerAppLifecycleObserver(context);
     }
 
     /**
      * 注册app生命周期监听 .
      */
-    private void registerAppLifecycleObserver(Context context) {
+    public void registerAppLifecycleObserver(Context context) {
         if (context == null) {
             return;
         }
