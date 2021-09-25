@@ -44,20 +44,10 @@ public class DStackActivityManager {
     private boolean executeStack;
     //是否需要重新attach引擎
     private boolean needReAttachEngine = false;
-    //完整android acivity栈
-    private List<String> androidStack = new ArrayList<>();
 
     private DStackActivityManager() {
         activities = new ArrayList<>();
         needRemoveActivities = new ArrayList<>();
-    }
-
-    /**
-     * 获取唯一id
-     */
-    public String generateUniqueId() {
-        double d = Math.random();
-        return (int) (d * 100000) + "";
     }
 
     /**
@@ -106,23 +96,6 @@ public class DStackActivityManager {
 
 
     /**
-     * 获取栈底Activity
-     */
-    public Activity getBottomActivity() {
-        return bottomActivity;
-    }
-
-    /**
-     * 获取栈内Activity数量
-     */
-    public int getActivitiesSize() {
-        if (activities == null) {
-            return 0;
-        }
-        return activities.size();
-    }
-
-    /**
      * 判断栈顶的activity是否和要打开的activity是同一个activity
      */
     public boolean isSameActivity(Class<?> needOpenActivity) {
@@ -151,9 +124,17 @@ public class DStackActivityManager {
         if (topActivity == null) {
             return;
         }
+        if (topActivity instanceof FlutterActivity ||
+                topActivity.getParent() instanceof FlutterActivity) {
+            topActivity.finish();
+            return;
+        }
         if (topActivity instanceof DFlutterActivity ||
-                topActivity.getParent() instanceof DFlutterActivity ||
-                topActivity instanceof FlutterFragmentActivity ||
+                topActivity.getParent() instanceof DFlutterActivity) {
+            topActivity.finish();
+            return;
+        }
+        if (topActivity instanceof FlutterFragmentActivity ||
                 topActivity.getParent() instanceof FlutterFragmentActivity) {
             topActivity.finish();
         }
@@ -190,34 +171,6 @@ public class DStackActivityManager {
     }
 
     /**
-     * 关闭bottomActivity之上的所有activity
-     */
-    public void closeActivityWithBottom() {
-        boolean find = false;
-        needRemoveActivities.clear();
-        Activity activity = bottomActivity;
-        for (int i = activities.size() - 1; i >= 0; i--) {
-            Activity tempActivity = activities.get(i);
-            if (tempActivity != activity) {
-                needRemoveActivities.add(tempActivity);
-            } else {
-                find = true;
-                break;
-            }
-        }
-        if (find) {
-            if (needRemoveActivities.size() == 0) {
-                return;
-            }
-            executeStack = true;
-            needRemoveActivities.get(0).finish();
-        } else {
-            needRemoveActivities.clear();
-        }
-    }
-
-
-    /**
      * 每次关闭activity后，看看待移除列表是否还有activity，继续执行关闭操作
      */
     private void handleNeedRemoveActivities(Activity activity) {
@@ -244,6 +197,15 @@ public class DStackActivityManager {
     }
 
     /**
+     * 获取栈内Activity数量
+     */
+    public int getActivitiesSize() {
+        if (activities == null) {
+            return 0;
+        }
+        return activities.size();
+    }
+    /**
      * 判断当前工程是否是一个纯Flutter工程
      */
     public boolean isFlutterApp() {
@@ -251,8 +213,14 @@ public class DStackActivityManager {
             return true;
         }
         if (bottomActivity instanceof FlutterActivity ||
-                bottomActivity.getParent() instanceof FlutterActivity ||
-                bottomActivity instanceof FlutterFragmentActivity ||
+                bottomActivity.getParent() instanceof FlutterActivity) {
+            return true;
+        }
+        if (bottomActivity instanceof DFlutterActivity ||
+                bottomActivity.getParent() instanceof DFlutterActivity) {
+            return true;
+        }
+        if (bottomActivity instanceof FlutterFragmentActivity ||
                 bottomActivity.getParent() instanceof FlutterFragmentActivity) {
             return true;
         }
@@ -263,6 +231,9 @@ public class DStackActivityManager {
      * 判断是否是FlutterActivity
      */
     public boolean isFlutterActivity(Activity activity) {
+        if (activity instanceof FlutterActivity) {
+            return true;
+        }
         if (activity instanceof DFlutterActivity) {
             return true;
         }
@@ -273,9 +244,14 @@ public class DStackActivityManager {
      * 关闭过一个flutterActivity，并且栈里还有flutterActivity，需要重新attach引擎
      */
     public void handleReAttachEngine(Activity activity) {
-        if (activity instanceof DFlutterActivity || activity instanceof FlutterFragmentActivity) {
+        if (
+                activity instanceof FlutterActivity ||
+                        activity instanceof DFlutterActivity ||
+                        activity instanceof FlutterFragmentActivity) {
             for (Activity tempActivity : activities) {
-                if (tempActivity instanceof DFlutterActivity || tempActivity instanceof FlutterFragmentActivity) {
+                if (tempActivity instanceof FlutterActivity ||
+                        tempActivity instanceof DFlutterActivity ||
+                        tempActivity instanceof FlutterFragmentActivity) {
                     needReAttachEngine = true;
                     break;
                 }
@@ -309,27 +285,4 @@ public class DStackActivityManager {
         return false;
     }
 
-    /**
-     * 添加android的栈视图
-     */
-    public void addStack(String stackName) {
-        androidStack.add(stackName);
-    }
-
-    /**
-     * 移除完整android的栈视图
-     */
-    public void removeStack(String stackName) {
-        androidStack.remove(stackName);
-    }
-
-    /**
-     * 获取栈内Activity数量
-     */
-    public int getStackSize() {
-        if (androidStack == null) {
-            return 0;
-        }
-        return androidStack.size();
-    }
 }
