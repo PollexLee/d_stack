@@ -214,6 +214,26 @@ class DNavigatorManager {
     DNavigatorManager.nodeHandle(null, null, DStackConstant.pop, result: result, animated: animated);
   }
 
+  /// result 返回值，可为空
+  /// maybePop
+  static Future<bool> maybePop({Map? result, bool animated = true}) async {
+    Route? _route =  DStackNavigatorObserver.instance?.currentRoute;
+    final RoutePopDisposition? disposition = await _route?.willPop();
+    switch (disposition) {
+      case RoutePopDisposition.bubble:
+        print('maybePop bubble false');
+        return false;
+      case RoutePopDisposition.pop:
+        print('maybePop pop true');
+        DNavigatorManager.pop(result: result, animated: animated);
+        return true;
+      case RoutePopDisposition.doNotPop:
+        print('maybePop doNotPop true');
+        return true;
+    }
+    return false;
+  }
+
   static String _generateId(Map result) {
     String id = result.hashCode.toString();
     // result.forEach((key, value) {
@@ -287,7 +307,7 @@ class DNavigatorManager {
     }
     // todo 测试params中获取[result]
     // test
-    _navigator!.maybePop(params != null ? params['result'] : null);
+    _navigator!.pop(params != null ? params['result'] : null);
     // _navigator!.pop(DStackPopResult<dynamic>(animated: animated, result: (params != null ? params['result'] : null)));
     return Future.value(true);
   }
