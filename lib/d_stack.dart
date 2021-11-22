@@ -35,6 +35,7 @@ enum TransitionType {
   cupertinoFullScreenDialog,
   fadeOpaque, // 透明
   fadeAndScale, // 透明缩放
+  ScaleRoute, // 从小变大
   none, // 无动画
 }
 

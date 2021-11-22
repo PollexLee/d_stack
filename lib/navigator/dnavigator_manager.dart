@@ -536,6 +536,19 @@ class DNavigatorManager {
           child: FadeTransition(opacity: animation, child: child),
           scale: Tween<double>(begin: 0.4, end: 1.0).animate(animation),
         );
+      } else if (transitionType == TransitionType.ScaleRoute) {
+        return ScaleTransition(
+          scale: Tween<double>(
+            begin: 0.0,
+            end: 1.0,
+          ).animate(
+            CurvedAnimation(
+              parent: animation,
+              curve: Curves.fastLinearToSlowEaseIn,
+            ),
+          ),
+          child: child,
+        );
       } else if (transitionType == TransitionType.none) {
         return child;
       } else {
