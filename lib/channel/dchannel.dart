@@ -50,20 +50,16 @@ class DChannel {
   }
 
   Future<List<DStackNode>> getNodeList() async {
-    return _methodChannel
-        .invokeMethod(DStackConstant.nodeList, null)
-        .then((list) {
-      if (list is List) {
-        List<DStackNode> nodeList = [];
-        list.forEach((element) {
-          DStackNode node = DStackNode(
-              route: element["route"], pageType: element["pageType"]);
-          nodeList.add(node);
-        });
-        return Future.value(nodeList);
-      }
-      return Future.value([]);
-    });
+    dynamic list = await _methodChannel.invokeMethod(DStackConstant.nodeList, null);
+    if (list is List) {
+      List<DStackNode> nodeList = [];
+      list.forEach((element) {
+        DStackNode node = DStackNode(route: element["route"], pageType: element["pageType"]);
+        nodeList.add(node);
+      });
+      return nodeList;
+    }
+    return [];
   }
 
   Future sendHomePageRoute(String? route) {
