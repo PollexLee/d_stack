@@ -161,19 +161,19 @@ import java.util.Arrays;
             setupFlutterEngine();
         }
 
-        if (host.shouldAttachEngineToActivity()) {
-            // Notify any plugins that are currently attached to our FlutterEngine that they
-            // are now attached to an Activity.
-            //
-            // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
-            // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
-            // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
-            // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
-            // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
-            // attached Activity is not a LifecycleOwner.
-            Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
-            flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
-        }
+        // if (host.shouldAttachEngineToActivity()) {
+        //     // Notify any plugins that are currently attached to our FlutterEngine that they
+        //     // are now attached to an Activity.
+        //     //
+        //     // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
+        //     // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
+        //     // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
+        //     // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
+        //     // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
+        //     // attached Activity is not a LifecycleOwner.
+        //     Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
+        //     flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
+        // }
 
         // Regardless of whether or not a FlutterEngine already existed, the PlatformPlugin
         // is bound to a specific Activity. Therefore, it needs to be created and configured
@@ -484,6 +484,21 @@ import java.util.Arrays;
     void onResume() {
         Log.v(TAG, "onResume()");
         ensureAlive();
+
+        if (host.shouldAttachEngineToActivity()) {
+            // Notify any plugins that are currently attached to our FlutterEngine that they
+            // are now attached to an Activity.
+            //
+            // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
+            // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
+            // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
+            // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
+            // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
+            // attached Activity is not a LifecycleOwner.
+            Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
+            flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
+        }
+
         flutterEngine.getLifecycleChannel().appIsResumed();
     }
 
