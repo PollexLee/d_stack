@@ -84,6 +84,12 @@ class DStackNavigatorObserver extends NavigatorObserver {
     }
   }
 
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _currentRoute = newRoute;
+  }
+
   /// route 路由目标页面
   /// previousRoute 目标页面的上一个页面
   // 滑动手势开始
