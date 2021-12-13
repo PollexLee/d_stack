@@ -181,7 +181,7 @@ import java.util.Arrays;
         // TODO(mattcarroll): the PlatformPlugin needs to be reimagined because it implicitly takes
         //                    control of the entire window. This is unacceptable for non-fullscreen
         //                    use-cases.
-        platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
+        // platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
 
         host.configureFlutterEngine(flutterEngine);
     }
@@ -480,6 +480,10 @@ import java.util.Arrays;
      *
      * <p>This method notifies the running Flutter app that it is "resumed" as per the Flutter app
      * lifecycle.
+     * <p>
+     * 重新调用attachToActivity，保证插件中的Activity对象是正确的；
+     * 在此处创建 platformPlugin，保证onResume后，{@link PlatformPlugin}功能正常；
+     * 如果已经存在过platformPlugin，需要拿出其中的主题参数，赋值给新的platformPlugin。
      */
     void onResume() {
         Log.v(TAG, "onResume()");
@@ -497,6 +501,22 @@ import java.util.Arrays;
             // attached Activity is not a LifecycleOwner.
             Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
             flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
+
+            try {
+                if (platformPlugin != null) {
+                    Field fs = platformPlugin.getClass().getDeclaredField("currentTheme");
+                    fs.setAccessible(true);
+                    Object currentTheme = fs.get(platformPlugin);
+                    platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
+                    Method method = platformPlugin.getClass().getDeclaredMethod("setSystemChromeSystemUIOverlayStyle", PlatformChannel.SystemChromeStyle.class);
+                    method.setAccessible(true);
+                    method.invoke(platformPlugin, currentTheme);
+                } else {
+                    platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
+                }
+            } catch (NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                e.printStackTrace();
+            }
         }
 
         flutterEngine.getLifecycleChannel().appIsResumed();
