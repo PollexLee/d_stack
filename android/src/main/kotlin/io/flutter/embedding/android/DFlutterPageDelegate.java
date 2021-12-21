@@ -4,6 +4,7 @@
 
 package io.flutter.embedding.android;
 
+import static android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL;
 import static android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW;
 import static io.flutter.embedding.android.FlutterActivityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
 
@@ -16,10 +17,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver.OnPreDrawListener;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.lifecycle.Lifecycle;
+
 import io.flutter.FlutterInjector;
 import io.flutter.Log;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -29,6 +32,8 @@ import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener;
 import io.flutter.embedding.engine.systemchannels.PlatformChannel;
 import io.flutter.plugin.platform.PlatformPlugin;
+import io.flutter.util.ViewUtils;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -75,13 +80,22 @@ import java.util.Arrays;
 
     // The FlutterActivity or FlutterFragment that is delegating most of its calls
     // to this FlutterActivityAndFragmentDelegate.
-    @NonNull private Host host;
-    @Nullable private FlutterEngine flutterEngine;
-    @Nullable private FlutterView flutterView;
-    @Nullable private PlatformPlugin platformPlugin;
-    @VisibleForTesting @Nullable OnPreDrawListener activePreDrawListener;
+    @NonNull
+    private Host host;
+    @Nullable
+    private FlutterEngine flutterEngine;
+    @Nullable
+    private FlutterView flutterView;
+    @Nullable
+    private PlatformPlugin platformPlugin;
+    @VisibleForTesting
+    @Nullable
+    OnPreDrawListener activePreDrawListener;
     private boolean isFlutterEngineFromHost;
     private boolean isFlutterUiDisplayed;
+    private boolean isFirstFrameRendered;
+    private boolean isAttached;
+    private boolean isActive = false;
 
     @NonNull
     private final FlutterUiDisplayListener flutterUiDisplayListener =
@@ -90,6 +104,7 @@ import java.util.Arrays;
                 public void onFlutterUiDisplayed() {
                     host.onFlutterUiDisplayed();
                     isFlutterUiDisplayed = true;
+                    isFirstFrameRendered = true;
                 }
 
                 @Override
@@ -101,6 +116,7 @@ import java.util.Arrays;
 
     DFlutterPageDelegate(@NonNull Host host) {
         this.host = host;
+        this.isFirstFrameRendered = false;
     }
 
     /**
@@ -139,6 +155,14 @@ import java.util.Arrays;
     }
 
     /**
+     * Whether or not this {@code FlutterActivityAndFragmentDelegate} is attached to a {@code
+     * FlutterEngine}.
+     */
+    /* package */ boolean isAttached() {
+        return isAttached;
+    }
+
+    /**
      * Invoke this method from {@code Activity#onCreate(Bundle)} or {@code
      * Fragment#onAttach(Context)}.
      *
@@ -165,19 +189,19 @@ import java.util.Arrays;
             setupFlutterEngine();
         }
 
-        // if (host.shouldAttachEngineToActivity()) {
-        //     // Notify any plugins that are currently attached to our FlutterEngine that they
-        //     // are now attached to an Activity.
-        //     //
-        //     // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
-        //     // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
-        //     // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
-        //     // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
-        //     // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
-        //     // attached Activity is not a LifecycleOwner.
-        //     Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
-        //     flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
-        // }
+//        if (host.shouldAttachEngineToActivity() && !isActive) {
+//            // Notify any plugins that are currently attached to our FlutterEngine that they
+//            // are now attached to an Activity.
+//            //
+//            // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
+//            // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
+//            // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
+//            // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
+//            // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
+//            // attached Activity is not a LifecycleOwner.
+//            Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
+//            flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
+//        }
 
         // Regardless of whether or not a FlutterEngine already existed, the PlatformPlugin
         // is bound to a specific Activity. Therefore, it needs to be created and configured
@@ -185,13 +209,16 @@ import java.util.Arrays;
         // TODO(mattcarroll): the PlatformPlugin needs to be reimagined because it implicitly takes
         //                    control of the entire window. This is unacceptable for non-fullscreen
         //                    use-cases.
-        // platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
+//        platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
 
         host.configureFlutterEngine(flutterEngine);
+        isAttached = true;
+        isActive = true;
     }
 
     @Override
-    public @NonNull Activity getAppComponent() {
+    public @NonNull
+    Activity getAppComponent() {
         final Activity activity = host.getActivity();
         if (activity == null) {
             throw new AssertionError(
@@ -318,7 +345,7 @@ import java.util.Arrays;
         flutterView.addOnFirstFrameRenderedListener(flutterUiDisplayListener);
 
         Log.v(TAG, "Attaching FlutterEngine to FlutterView.");
-        flutterView.attachToFlutterEngine(flutterEngine);
+//        flutterView.attachToFlutterEngine(flutterEngine);
         flutterView.setId(flutterViewId);
 
         SplashScreen splashScreen = host.provideSplashScreen();
@@ -329,7 +356,7 @@ import java.util.Arrays;
                     "A splash screen was provided to Flutter, but this is deprecated. See"
                             + " flutter.dev/go/android-splash-migration for migration steps.");
             FlutterSplashView flutterSplashView = new FlutterSplashView(host.getContext());
-            flutterSplashView.setId(DViewUtils.generateViewId(FLUTTER_SPLASH_VIEW_FALLBACK_ID));
+            flutterSplashView.setId(ViewUtils.generateViewId(FLUTTER_SPLASH_VIEW_FALLBACK_ID));
             flutterSplashView.displayFlutterViewWithSplash(flutterView, splashScreen);
 
             return flutterSplashView;
@@ -484,46 +511,46 @@ import java.util.Arrays;
      *
      * <p>This method notifies the running Flutter app that it is "resumed" as per the Flutter app
      * lifecycle.
-     * <p>
-     * 重新调用attachToActivity，保证插件中的Activity对象是正确的；
-     * 在此处创建 platformPlugin，保证onResume后，{@link PlatformPlugin}功能正常；
-     * 如果已经存在过platformPlugin，需要拿出其中的主题参数，赋值给新的platformPlugin。
      */
     void onResume() {
         Log.v(TAG, "onResume()");
         ensureAlive();
 
-        if (host.shouldAttachEngineToActivity()) {
-            // Notify any plugins that are currently attached to our FlutterEngine that they
-            // are now attached to an Activity.
-            //
-            // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
-            // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
-            // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
-            // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
-            // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
-            // attached Activity is not a LifecycleOwner.
-            Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
-            flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
+//        if (host.shouldAttachEngineToActivity() && !isActive && !isAttached()) {
+        // Notify any plugins that are currently attached to our FlutterEngine that they
+        // are now attached to an Activity.
+        //
+        // Passing this Fragment's Lifecycle should be sufficient because as long as this Fragment
+        // is attached to its Activity, the lifecycles should be in sync. Once this Fragment is
+        // detached from its Activity, that Activity will be detached from the FlutterEngine, too,
+        // which means there shouldn't be any possibility for the Fragment Lifecycle to get out of
+        // sync with the Activity. We use the Fragment's Lifecycle because it is possible that the
+        // attached Activity is not a LifecycleOwner.
 
-            try {
-                if (platformPlugin != null) {
-                    Field fs = platformPlugin.getClass().getDeclaredField("currentTheme");
-                    fs.setAccessible(true);
-                    Object currentTheme = fs.get(platformPlugin);
-                    platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
-                    Method method = platformPlugin.getClass().getDeclaredMethod("setSystemChromeSystemUIOverlayStyle", PlatformChannel.SystemChromeStyle.class);
-                    method.setAccessible(true);
-                    method.invoke(platformPlugin, currentTheme);
-                } else {
-                    platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
-                }
-            } catch (NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-                e.printStackTrace();
+        // copy form mix_stack
+        try {
+            if (platformPlugin != null) {
+                Field fs = platformPlugin.getClass().getDeclaredField("currentTheme");
+                fs.setAccessible(true);
+                Object currentTheme = fs.get(platformPlugin);
+                platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
+                Method method = platformPlugin.getClass().getDeclaredMethod("setSystemChromeSystemUIOverlayStyle", PlatformChannel.SystemChromeStyle.class);
+                method.setAccessible(true);
+                method.invoke(platformPlugin, currentTheme);
+            } else {
+                platformPlugin = host.providePlatformPlugin(host.getActivity(), flutterEngine);
             }
+        } catch (NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+            e.printStackTrace();
         }
+        Log.v(TAG, "Attaching FlutterEngine to the Activity that owns this delegate.");
+        flutterEngine.getActivityControlSurface().attachToActivity(this, host.getLifecycle());
+//        }
+        flutterView.attachToFlutterEngine(flutterEngine);
 
         flutterEngine.getLifecycleChannel().appIsResumed();
+
+        isActive = true;
     }
 
     /**
@@ -541,16 +568,22 @@ import java.util.Arrays;
         Log.v(TAG, "onPostResume()");
         ensureAlive();
         if (flutterEngine != null) {
-            if (platformPlugin != null) {
-                // TODO(mattcarroll): find a better way to handle the update of UI overlays than calling
-                // through
-                //                    to platformPlugin. We're implicitly entangling the Window, Activity,
-                // Fragment,
-                //                    and engine all with this one call.
-                platformPlugin.updateSystemUiOverlays();
-            }
+            updateSystemUiOverlays();
         } else {
             Log.w(TAG, "onPostResume() invoked before FlutterFragment was attached to an Activity.");
+        }
+    }
+
+    /**
+     * Refreshes Android's window system UI (AKA system chrome) to match Flutter's desired system
+     * chrome style.
+     */
+    void updateSystemUiOverlays() {
+        if (platformPlugin != null) {
+            // TODO(mattcarroll): find a better way to handle the update of UI overlays than calling
+            // through to platformPlugin. We're implicitly entangling the Window, Activity,
+            // Fragment, and engine all with this one call.
+            platformPlugin.updateSystemUiOverlays();
         }
     }
 
@@ -563,7 +596,27 @@ import java.util.Arrays;
     void onPause() {
         Log.v(TAG, "onPause()");
         ensureAlive();
-        flutterEngine.getLifecycleChannel().appIsInactive();
+        flutterEngine.getLifecycleChannel().appIsPaused();
+        flutterView.postDelayed(() -> {
+            if (flutterView.renderSurface instanceof FlutterImageView) {
+                flutterView.renderSurface.detachFromRenderer();
+                Log.v(TAG, "execute revertImageView");
+            }
+            flutterView.detachFromFlutterEngine();
+//        flutterView.revertImageView(() -> {
+//            Log.v(TAG, "execute revertImageView");
+//        });
+            flutterEngine.getActivityControlSurface().detachFromActivity();
+
+            if (platformPlugin != null) {
+                platformPlugin.destroy();
+                platformPlugin = null;
+            }
+            //        flutterEngine.getPlatformViewsController().onEndFrame();
+            isActive = false;
+        }, 500);
+
+
     }
 
     /**
@@ -583,7 +636,7 @@ import java.util.Arrays;
     void onStop() {
         Log.v(TAG, "onStop()");
         ensureAlive();
-        flutterEngine.getLifecycleChannel().appIsPaused();
+//        flutterEngine.getLifecycleChannel().appIsPaused();
     }
 
     /**
@@ -599,8 +652,10 @@ import java.util.Arrays;
             flutterView.getViewTreeObserver().removeOnPreDrawListener(activePreDrawListener);
             activePreDrawListener = null;
         }
-        flutterView.detachFromFlutterEngine();
+//        flutterView.detachFromFlutterEngine();
         flutterView.removeOnFirstFrameRenderedListener(flutterUiDisplayListener);
+
+//        flutterView.de
     }
 
     void onSaveInstanceState(@Nullable Bundle bundle) {
@@ -650,15 +705,12 @@ import java.util.Arrays;
      *       surrounding {@code Activity}, if it was previously attached.
      *   <li>Destroys this delegate's {@link PlatformPlugin}.
      *   <li>Destroys this delegate's {@link io.flutter.embedding.engine.FlutterEngine} if {@link
-     *       Host#shouldDestroyEngineWithHost()} ()} returns true.
+     *       Host#shouldDestroyEngineWithHoflutterTextureViewst()} ()} returns true.
      * </ol>
      */
     void onDetach() {
         Log.v(TAG, "onDetach()");
         ensureAlive();
-
-        // Give the host an opportunity to cleanup any references that were created in
-        // configureFlutterEngine().
         host.cleanUpFlutterEngine(flutterEngine);
 
         if (host.shouldAttachEngineToActivity()) {
@@ -670,10 +722,6 @@ import java.util.Arrays;
                 flutterEngine.getActivityControlSurface().detachFromActivity();
             }
         }
-
-        // Null out the platformPlugin to avoid a possible retain cycle between the plugin, this
-        // Fragment,
-        // and this Fragment's Activity.
         if (platformPlugin != null) {
             platformPlugin.destroy();
             platformPlugin = null;
@@ -690,6 +738,8 @@ import java.util.Arrays;
             }
 
             flutterEngine = null;
+
+            isAttached = false;
         }
     }
 
@@ -819,17 +869,19 @@ import java.util.Arrays;
     void onTrimMemory(int level) {
         ensureAlive();
         if (flutterEngine != null) {
-            // This is always an indication that the Dart VM should collect memory
-            // and free any unneeded resources.
-            flutterEngine.getDartExecutor().notifyLowMemoryWarning();
             // Use a trim level delivered while the application is running so the
             // framework has a chance to react to the notification.
-            if (level == TRIM_MEMORY_RUNNING_LOW) {
-                Log.v(TAG, "Forwarding onTrimMemory() to FlutterEngine. Level: " + level);
+            // Avoid being too aggressive before the first frame is rendered. If it is
+            // not at least running critical, we should avoid delaying the frame for
+            // an overly aggressive GC.
+            boolean trim =
+                    isFirstFrameRendered
+                            ? level >= TRIM_MEMORY_RUNNING_LOW
+                            : level >= TRIM_MEMORY_RUNNING_CRITICAL;
+            if (trim) {
+                flutterEngine.getDartExecutor().notifyLowMemoryWarning();
                 flutterEngine.getSystemChannel().sendMemoryPressureWarning();
             }
-        } else {
-            Log.w(TAG, "onTrimMemory() invoked before FlutterFragment was attached to an Activity.");
         }
     }
 
@@ -876,7 +928,9 @@ import java.util.Arrays;
         @NonNull
         Context getContext();
 
-        /** Returns true if the delegate should retrieve the initial route from the {@link Intent}. */
+        /**
+         * Returns true if the delegate should retrieve the initial route from the {@link Intent}.
+         */
         @Nullable
         boolean shouldHandleDeeplinking();
 
@@ -894,7 +948,9 @@ import java.util.Arrays;
         @NonNull
         Lifecycle getLifecycle();
 
-        /** Returns the {@link FlutterShellArgs} that should be used when initializing Flutter. */
+        /**
+         * Returns the {@link FlutterShellArgs} that should be used when initializing Flutter.
+         */
         @NonNull
         FlutterShellArgs getFlutterShellArgs();
 
@@ -932,11 +988,15 @@ import java.util.Arrays;
         @NonNull
         String getDartEntrypointFunctionName();
 
-        /** Returns the path to the app bundle where the Dart code exists. */
+        /**
+         * Returns the path to the app bundle where the Dart code exists.
+         */
         @NonNull
         String getAppBundlePath();
 
-        /** Returns the initial route that Flutter renders. */
+        /**
+         * Returns the initial route that Flutter renders.
+         */
         @Nullable
         String getInitialRoute();
 
@@ -1023,10 +1083,14 @@ import java.util.Arrays;
          */
         void onFlutterTextureViewCreated(@NonNull FlutterTextureView flutterTextureView);
 
-        /** Invoked by this delegate when its {@link FlutterView} starts painting pixels. */
+        /**
+         * Invoked by this delegate when its {@link FlutterView} starts painting pixels.
+         */
         void onFlutterUiDisplayed();
 
-        /** Invoked by this delegate when its {@link FlutterView} stops painting pixels. */
+        /**
+         * Invoked by this delegate when its {@link FlutterView} stops painting pixels.
+         */
         void onFlutterUiNoLongerDisplayed();
 
         /**
@@ -1041,5 +1105,17 @@ import java.util.Arrays;
          * <p>This defaults to true, unless a cached engine is used.
          */
         boolean shouldRestoreAndSaveState();
+
+        /**
+         * Refreshes Android's window system UI (AKA system chrome) to match Flutter's desired system
+         * chrome style.
+         *
+         * <p>This is useful when using the splash screen API available in Android 12. {@code
+         * SplashScreenView#remove} resets the system UI colors to the values set prior to the execution
+         * of the Dart entrypoint. As a result, the values set from Dart are reverted by this API. To
+         * workaround this issue, call this method after removing the splash screen with {@code
+         * SplashScreenView#remove}.
+         */
+        void updateSystemUiOverlays();
     }
 }

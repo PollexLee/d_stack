@@ -239,7 +239,7 @@ public class DFlutterActivity extends Activity
      */
     @NonNull
     public static NewEngineIntentBuilder withNewEngine() {
-        return new NewEngineIntentBuilder(FlutterActivity.class);
+        return new NewEngineIntentBuilder(DFlutterActivity.class);
     }
 
     /**
@@ -617,15 +617,15 @@ public class DFlutterActivity extends Activity
      *
      * <p>After calling, this activity should be disposed immediately and not be re-used.
      */
-    private void release() {
-        if (DStackActivityManager.getInstance().haveFlutterContainer()) {
-            return;
-        }
-        delegate.onDestroyView();
-        delegate.onDetach();
-        delegate.release();
-        delegate = null;
-    }
+    // private void release() {
+    //     if (DStackActivityManager.getInstance().haveFlutterContainer()) {
+    //         return;
+    //     }
+    //     delegate.onDestroyView();
+    //     delegate.onDetach();
+    //     delegate.release();
+    //     delegate = null;
+    // }
 
     @Override
     public void detachFromFlutterEngine() {
@@ -636,14 +636,17 @@ public class DFlutterActivity extends Activity
                         + " connection to the engine "
                         + getFlutterEngine()
                         + " evicted by another attaching activity");
-        release();
+                if (delegate != null) {
+            delegate.onDestroyView();
+            delegate.onDetach();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (stillAttachedForEvent("onDestroy")) {
-            release();
+            // release();
         }
         lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
     }
