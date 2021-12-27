@@ -38,6 +38,7 @@ public class DStackLifecycleObserver implements Application.ActivityLifecycleCal
         }
         DStackActivityManager.getInstance().addActivity(activity);
         activeActivity = activity;
+
         appStart = DStackActivityManager.getInstance().getActivitiesSize() == 1;
         if (appStart) {
             DNode node;
@@ -104,13 +105,14 @@ public class DStackLifecycleObserver implements Application.ActivityLifecycleCal
         if (activeActivity != activity) {
             //正在执行恢复activity的逻辑，页面返回操作，onCreate，onResumed不是同一个activity
             activeActivity = activity;
-            if (DStackActivityManager.getInstance().isNeedReAttachEngine()) {
-                //判断是否需要重新attach flutter引擎，1.17以上bug，解决软键盘不能弹出问题
-                DLog.logE("需要needReAttachEngine");
-                FlutterView flutterView = DStackUtils.getFlutterView(activity);
-                DStackUtils.resetAttachEngine(flutterView);
-                DStackActivityManager.getInstance().setNeedReAttachEngine(false);
-            }
+            // 不建议再生命周期这里做引擎操作，增加了维护成本，要放到delegate中去做！add by @pollex
+//            if (DStackActivityManager.getInstance().isNeedReAttachEngine()) {
+//                //判断是否需要重新attach flutter引擎，1.17以上bug，解决软键盘不能弹出问题
+//                DLog.logE("需要needReAttachEngine");
+//                FlutterView flutterView = DStackUtils.getFlutterView(activity);
+//                DStackUtils.resetAttachEngine(flutterView);
+//                DStackActivityManager.getInstance().setNeedReAttachEngine(false);
+//            }
         }
     }
 
