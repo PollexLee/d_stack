@@ -172,7 +172,7 @@
                 // 更新更节点
                 DNode *rootNode = [self.nodeList firstObject];
                 [self sendPageLifeCicleToFlutterWithAppearNode:node
-                                                 disappearNode:rootNode
+                                                 disappearNode:[self.nodeList lastObject]
                                                     actionType:node.actionTypeString];
                 [rootNode copyWithNode:node];
                 [self operationNode:rootNode];
