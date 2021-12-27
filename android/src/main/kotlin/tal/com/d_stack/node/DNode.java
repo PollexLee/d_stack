@@ -6,6 +6,8 @@ import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
+import tal.com.d_stack.node.constants.DNodePageType;
+
 /**
  * 页面节点信息
  */
@@ -238,6 +240,14 @@ public class DNode {
 
     public void setAnimated(boolean animated) {
         this.animated = animated;
+    }
+
+    public boolean isNative() {
+        return getPageType().equals(DNodePageType.DNodePageTypeNative);
+    }
+
+    public boolean isFlutter() {
+        return getPageType().equals(DNodePageType.DNodePageTypeFlutter);
     }
 
     @Override

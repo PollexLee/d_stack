@@ -53,6 +53,18 @@ public class DNodeManager {
         return currentNode;
     }
 
+    /**
+     * 获取上一个页面节点
+     *
+     * @return DNode
+     */
+    public DNode getLastNode() {
+        if (nodeList != null && nodeList.size() > 1) {
+            return nodeList.get(nodeList.size() - 2);
+        }
+        return null;
+    }
+
     //检查节点
     public void checkNode(DNode node) {
         if (node == null) {
@@ -159,10 +171,10 @@ public class DNodeManager {
 
             case DNodeActionType.DNodeActionPushAndRemoveUntil:
                 DLog.logD("----------pushAndRemoveUntil方法开始----------");
+                DNode pageNode = currentNode;
                 clearNodes();
                 nodeList.add(node);
                 updateNodes();
-                DNode pageNode = currentNode;
                 PageLifecycleManager.pageAppearWithReplace(pageNode, currentNode);
                 DLog.logD("----------pushAndRemoveUntil方法结束----------");
                 break;

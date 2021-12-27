@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.flutter.embedding.android.DFlutterActivity;
+import io.flutter.embedding.android.DFlutterPageDelegate;
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.android.FlutterFragmentActivity;
 import tal.com.d_stack.node.DNode;
@@ -34,6 +35,8 @@ public class DStackActivityManager {
 
     //activity栈集合
     private List<Activity> activities;
+    // Host栈
+    private List<DFlutterPageDelegate.Host> hostList;
     //栈顶activity
     private Activity topActivity;
     //栈底activity
@@ -47,6 +50,7 @@ public class DStackActivityManager {
 
     private DStackActivityManager() {
         activities = new ArrayList<>();
+        hostList = new ArrayList<>();
         needRemoveActivities = new ArrayList<>();
     }
 
@@ -74,6 +78,20 @@ public class DStackActivityManager {
         setBottomAndTopActivity();
     }
 
+    public void addHost(DFlutterPageDelegate.Host host) {
+        if (host == null) {
+            return;
+        }
+        hostList.add(host);
+    }
+
+    public void removeHost(DFlutterPageDelegate.Host host) {
+        if (host == null) {
+            return;
+        }
+        hostList.remove(host);
+    }
+
     /**
      * 设置栈顶和栈底Activity
      */
@@ -92,6 +110,13 @@ public class DStackActivityManager {
      */
     public Activity getTopActivity() {
         return topActivity;
+    }
+
+    public DFlutterPageDelegate.Host getLastHost() {
+        if (hostList == null || hostList.size() <= 1) {
+            return null;
+        }
+        return hostList.get(hostList.size() - 2);
     }
 
 
@@ -205,6 +230,7 @@ public class DStackActivityManager {
         }
         return activities.size();
     }
+
     /**
      * 判断当前工程是否是一个纯Flutter工程
      */

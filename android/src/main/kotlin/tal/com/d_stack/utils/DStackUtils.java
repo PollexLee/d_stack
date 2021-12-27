@@ -20,6 +20,7 @@ public class DStackUtils {
 
     /**
      * 通过传入的FlutterActivity获取对应的FlutterView
+     * 通过反射，获取delegate，然后再反射获取flutterView对象
      */
     public static FlutterView getFlutterView(Activity activity) {
         if (activity == null) {
@@ -75,6 +76,7 @@ public class DStackUtils {
     /**
      * 重新绑定当前flutterView对应的flutter引擎
      */
+    @Deprecated
     public static void resetAttachEngine(FlutterView flutterView) {
         if (flutterView == null) {
             return;

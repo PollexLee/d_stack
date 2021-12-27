@@ -33,6 +33,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
@@ -40,6 +41,7 @@ import androidx.core.content.res.ResourcesCompat;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
+
 import io.flutter.Log;
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -247,7 +249,7 @@ public class DFlutterActivity extends Activity
      * FlutterEngine} and the desired configuration.
      */
     public static class NewEngineIntentBuilder {
-        private final Class<? extends FlutterActivity> activityClass;
+        private final Class<? extends DFlutterActivity> activityClass;
         private String initialRoute = DEFAULT_INITIAL_ROUTE;
         private String backgroundMode = DEFAULT_BACKGROUND_MODE;
 
@@ -261,7 +263,7 @@ public class DFlutterActivity extends Activity
          *
          * <p>{@code return new NewEngineIntentBuilder(MyFlutterActivity.class); }
          */
-        public NewEngineIntentBuilder(@NonNull Class<? extends FlutterActivity> activityClass) {
+        public NewEngineIntentBuilder(@NonNull Class<? extends DFlutterActivity> activityClass) {
             this.activityClass = activityClass;
         }
 
@@ -397,9 +399,11 @@ public class DFlutterActivity extends Activity
     // Delegate that runs all lifecycle and OS hook logic that is common between
     // FlutterActivity and FlutterFragment. See the FlutterActivityAndFragmentDelegate
     // implementation for details about why it exists.
-    @VisibleForTesting protected DFlutterPageDelegate delegate;
+    @VisibleForTesting
+    protected DFlutterPageDelegate delegate;
 
-    @NonNull private LifecycleRegistry lifecycle;
+    @NonNull
+    private LifecycleRegistry lifecycle;
 
     public DFlutterActivity() {
         lifecycle = new LifecycleRegistry(this);
@@ -427,7 +431,7 @@ public class DFlutterActivity extends Activity
         super.onCreate(savedInstanceState);
 
         delegate = new DFlutterPageDelegate(this);
-        delegate.onAttach(this);
+        delegate.onCreate(this);
         delegate.onRestoreInstanceState(savedInstanceState);
 
         lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
@@ -439,35 +443,6 @@ public class DFlutterActivity extends Activity
         configureStatusBarForFullscreenFlutterExperience();
     }
 
-    /**
-     * Switches themes for this {@code Activity} from the theme used to launch this {@code Activity}
-     * to a "normal theme" that is intended for regular {@code Activity} operation.
-     *
-     * <p>This behavior is offered so that a "launch screen" can be displayed while the application
-     * initially loads. To utilize this behavior in an app, do the following:
-     *
-     * <ol>
-     *   <li>Create 2 different themes in style.xml: one theme for the launch screen and one theme for
-     *       normal display.
-     *   <li>In the launch screen theme, set the "windowBackground" property to a {@code Drawable} of
-     *       your choice.
-     *   <li>In the normal theme, customize however you'd like.
-     *   <li>In the AndroidManifest.xml, set the theme of your {@code FlutterActivity} to your launch
-     *       theme.
-     *   <li>Add a {@code <meta-data>} property to your {@code FlutterActivity} with a name of
-     *       "io.flutter.embedding.android.NormalTheme" and set the resource to your normal theme,
-     *       e.g., {@code android:resource="@style/MyNormalTheme}.
-     * </ol>
-     *
-     * With the above settings, your launch theme will be used when loading the app, and then the
-     * theme will be switched to your normal theme once the app has initialized.
-     *
-     * <p>Do not change aspects of system chrome between a launch theme and normal theme. Either
-     * define both themes to be fullscreen or not, and define both themes to display the same status
-     * bar and navigation bar settings. If you wish to adjust system chrome once your Flutter app
-     * renders, use platform channels to instruct Android to do so at the appropriate time. This will
-     * avoid any jarring visual changes during app startup.
-     */
     private void switchLaunchThemeForNormalTheme() {
         try {
             Bundle metaData = getMetaData();
@@ -607,26 +582,6 @@ public class DFlutterActivity extends Activity
         }
     }
 
-    /**
-     * Irreversibly release this activity's control of the {@link
-     * io.flutter.embedding.engine.FlutterEngine} and its subcomponents.
-     *
-     * <p>Calling will disconnect this activity's view from the Flutter renderer, disconnect this
-     * activity from plugins' {@link ActivityControlSurface}, and stop system channel messages from
-     * this activity.
-     *
-     * <p>After calling, this activity should be disposed immediately and not be re-used.
-     */
-    // private void release() {
-    //     if (DStackActivityManager.getInstance().haveFlutterContainer()) {
-    //         return;
-    //     }
-    //     delegate.onDestroyView();
-    //     delegate.onDetach();
-    //     delegate.release();
-    //     delegate = null;
-    // }
-
     @Override
     public void detachFromFlutterEngine() {
         Log.w(
@@ -636,19 +591,31 @@ public class DFlutterActivity extends Activity
                         + " connection to the engine "
                         + getFlutterEngine()
                         + " evicted by another attaching activity");
-                if (delegate != null) {
+        if (delegate != null) {
             delegate.onDestroyView();
             delegate.onDetach();
         }
     }
 
     @Override
+    public void attachToFlutterEngine() {
+        delegate.onAttach(this);
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (stillAttachedForEvent("onDestroy")) {
-            // release();
+            // 延时解绑当前并绑定上一个
+            delegate.detachFromFlutterEngine();
+//            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
+
+            if (DStackActivityManager.getInstance().getLastHost() != null) {
+                DStackActivityManager.getInstance().getLastHost().attachToFlutterEngine();
+            }
         }
-        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
+        DStackActivityManager.getInstance().removeHost(this);
+
     }
 
     @Override
@@ -670,7 +637,9 @@ public class DFlutterActivity extends Activity
     @Override
     public void onBackPressed() {
         if (stillAttachedForEvent("onBackPressed")) {
-            delegate.onBackPressed();
+            if (!delegate.onBackPressed()) {
+                super.onBackPressed();
+            }
         }
     }
 
@@ -808,7 +777,7 @@ public class DFlutterActivity extends Activity
      *       FlutterActivityLaunchConfigs#INITIAL_ROUTE_META_DATA_KEY} for this {@code Activity} in
      *       the Android manifest.
      * </ol>
-     *
+     * <p>
      * If both preferences are set, the {@code Intent} preference takes priority.
      *
      * <p>The reason that a {@code <meta-data>} preference is supported is because this {@code
@@ -932,7 +901,9 @@ public class DFlutterActivity extends Activity
         return delegate.getFlutterEngine();
     }
 
-    /** Retrieves the meta data specified in the AndroidManifest.xml. */
+    /**
+     * Retrieves the meta data specified in the AndroidManifest.xml.
+     */
     @Nullable
     protected Bundle getMetaData() throws PackageManager.NameNotFoundException {
         ActivityInfo activityInfo =
@@ -1083,6 +1054,13 @@ public class DFlutterActivity extends Activity
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void updateSystemUiOverlays() {
+        if (delegate != null) {
+            delegate.updateSystemUiOverlays();
+        }
     }
 
     @Override
