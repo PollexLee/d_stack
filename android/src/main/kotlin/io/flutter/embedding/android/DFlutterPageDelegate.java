@@ -30,17 +30,10 @@ import io.flutter.embedding.engine.FlutterEngineCache;
 import io.flutter.embedding.engine.FlutterShellArgs;
 import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener;
-import io.flutter.embedding.engine.systemchannels.PlatformChannel;
 import io.flutter.plugin.platform.PlatformPlugin;
-import io.flutter.util.ViewUtils;
-import tal.com.d_stack.DStack;
 import tal.com.d_stack.node.DNodeManager;
 import tal.com.d_stack.observer.DStackActivityManager;
-import tal.com.d_stack.utils.DStackUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 
 
@@ -244,7 +237,7 @@ public class DFlutterPageDelegate implements ExclusiveAppComponent<Activity> {
                     "A splash screen was provided to Flutter, but this is deprecated. See"
                             + " flutter.dev/go/android-splash-migration for migration steps.");
             FlutterSplashView flutterSplashView = new FlutterSplashView(host.getContext());
-            flutterSplashView.setId(ViewUtils.generateViewId(FLUTTER_SPLASH_VIEW_FALLBACK_ID));
+            flutterSplashView.setId(DViewUtils.generateViewId(FLUTTER_SPLASH_VIEW_FALLBACK_ID));
             flutterSplashView.displayFlutterViewWithSplash(flutterView, splashScreen);
 
             return flutterSplashView;
@@ -502,10 +495,10 @@ public class DFlutterPageDelegate implements ExclusiveAppComponent<Activity> {
         host.cleanUpFlutterEngine(flutterEngine);
 
         // 避免解绑是PlatformView实现中的FlutterImageView不被解绑的问题
-        assert flutterView != null;
-        if (flutterView.renderSurface instanceof FlutterImageView) {
-            flutterView.renderSurface.detachFromRenderer();
-        }
+//        assert flutterView != null;
+//        if (flutterView.renderSurface instanceof FlutterImageView) {
+//            flutterView.renderSurface.detachFromRenderer();
+//        }
         flutterView.detachFromFlutterEngine();
 
 
