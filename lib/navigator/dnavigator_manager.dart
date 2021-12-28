@@ -55,9 +55,9 @@ class DNavigatorManager {
       bool clearStack = false}) {
     var route = routeCreator(routeName,
         params: params, transition: transition, transitionDuration: transitionDuration, transitionsBuilder: transitionsBuilder);
-
     if (clearStack) {
-      DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.pushAndRemoveUntil, result: params, animated: true, route: route);
+      // 删除传递给原生的参数
+      DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.pushAndRemoveUntil, result: {}, animated: true, route: route);
       return _navigator!.pushAndRemoveUntil(route, (route) => route == null);
     } else if (replace) {
       DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.replace, result: {}, route: route);
@@ -198,6 +198,7 @@ class DNavigatorManager {
         routeName: routeName, params: params, maintainState: maintainState, pushAnimated: animated, fullscreenDialog: fullscreenDialog);
     DNavigatorManager.nodeHandle(routeName, pageType, DStackConstant.pushAndRemoveUntil,
         result: params, homePage: homePage, animated: animated, route: route);
+
     return _navigator!.pushAndRemoveUntil(route, (route) => route == null);
   }
 
@@ -477,6 +478,19 @@ class DNavigatorManager {
     return route;
   }
 
+    // dialog 的兼容问题，最好在observer中修改
+  static PageRouteBuilder<dynamic> tempBuilder(WidgetBuilder builder, RouteSettings routeSettings, Duration transitionDuration) {
+    return PageRouteBuilder<dynamic>(
+      opaque: false,
+      settings: routeSettings,
+      pageBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
+        return builder(context);
+      },
+      transitionDuration: transitionDuration,
+      transitionsBuilder: _standardTransitionsBuilder(TransitionType.inFromBottom),
+    );
+  }
+
   static Route routeCreator(String routeName,
       {Map? params,
       TransitionType? transition,
@@ -487,6 +501,12 @@ class DNavigatorManager {
     bool isNativeTransition = (transition == TransitionType.native || transition == TransitionType.nativeModal);
     DStackWidgetBuilder stackWidgetBuilder = DStack.instance.pageBuilder(routeName);
     WidgetBuilder builder = stackWidgetBuilder(params);
+
+    if ((isNativeTransition && transition == TransitionType.nativeModal)
+        || transition == TransitionType.materialFullScreenDialog
+        || transition == TransitionType.cupertinoFullScreenDialog) {
+      return tempBuilder(builder, routeSettings, transitionDuration);
+    } else
     if (isNativeTransition) {
       if (Platform.isIOS) {
         return CupertinoPageRoute<dynamic>(settings: routeSettings, fullscreenDialog: transition == TransitionType.nativeModal, builder: builder);
