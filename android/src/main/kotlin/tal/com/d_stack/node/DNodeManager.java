@@ -155,7 +155,9 @@ public class DNodeManager {
                 break;
             case DNodeActionType.DNodeActionTypeReplace:
                 DLog.logD("----------replace方法开始----------");
-                DNode preNode = currentNode;
+                 DNode preNode = new DNode(new DNode.Builder()
+                    .pageType(DNodePageType.DNodePageTypeFlutter)
+                    .target(currentNode.getTarget()));
                 if (node.isFromFlutter()) {
                     currentNode.setTarget(node.getTarget());
                     currentNode.setPageType(DNodePageType.DNodePageTypeFlutter);
