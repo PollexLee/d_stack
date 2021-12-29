@@ -167,11 +167,6 @@
                                              selector:@selector(changeBottomBarVisible:)
                                                  name:DStackNotificationNameChangeBottomBarVisible
                                                object:nil];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(applicationWillTerminate:)
-                                                 name:UIApplicationWillTerminateNotification
-                                               object:nil];
 }
 
 - (void)changeBottomBarVisible:(NSNotification *)notification
@@ -200,13 +195,5 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-- (void)applicationWillTerminate:(NSNotification*)notification {
-    NSLog(@"engine will terminate");
-    // 2.8.1 engine层加了这个方法，这里就不需要了，删除掉这里的代码
-    if (self.isViewLoaded && self.view.window) {
-        [self.dStackFlutterEngine.lifecycleChannel sendMessage:@"AppLifecycleState.detached"];
-    }
-  [self.dStackFlutterEngine destroyContext];
-}
 
 @end

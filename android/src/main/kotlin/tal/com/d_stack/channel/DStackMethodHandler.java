@@ -34,17 +34,21 @@ public class DStackMethodHandler implements MethodChannel.MethodCallHandler {
         switch (method) {
             case "sendNodeToNative":
                 handleSendNodeToNative(args);
+                result.success("节点操作完成");
                 break;
             case "sendRemoveFlutterPageNode":
                 handleSendRemoveFlutterPageNode(args);
+                result.success("节点移除完成");
                 break;
             case "sendNodeList":
                 handleSendNodeList(result);
                 break;
             case "sendUpdateBoundaryNode":
                 handleSendUpdateBoundaryNode(args);
+                result.success("节点操作完成");
                 break;
             default:
+                result.success("节点操作完成");
                 break;
         }
     }
