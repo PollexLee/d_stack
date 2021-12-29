@@ -52,18 +52,18 @@ class DNavigatorManager {
       Duration transitionDuration = const Duration(milliseconds: 250),
       RouteTransitionsBuilder? transitionsBuilder,
       bool replace = false,
-      bool clearStack = false}) {
+      bool clearStack = false}) async {
     var route = routeCreator(routeName,
         params: params, transition: transition, transitionDuration: transitionDuration, transitionsBuilder: transitionsBuilder);
     if (clearStack) {
       // 删除传递给原生的参数
-      DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.pushAndRemoveUntil, result: {}, animated: true, route: route);
+      await DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.pushAndRemoveUntil, result: {}, animated: true, route: route);
       return _navigator!.pushAndRemoveUntil(route, (route) => route == null);
     } else if (replace) {
-      DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.replace, result: {}, route: route);
+      await DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.replace, result: {}, route: route);
       return _navigator!.pushReplacement(route);
     } else {
-      DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.push, result: {}, route: route);
+      await DNavigatorManager.nodeHandle(routeName, PageType.flutter, DStackConstant.push, result: {}, route: route);
       return _navigator!.push(route);
     }
   }
@@ -263,7 +263,7 @@ class DNavigatorManager {
     DNavigatorManager.nodeHandle(null, null, DStackConstant.dismiss, result: result, animated: animated);
   }
 
-  static void nodeHandle(String? target, PageType? pageType, String actionType, {Map? result, bool? homePage, bool animated = true, Route? route}) {
+  static Future nodeHandle(String? target, PageType? pageType, String actionType, {Map? result, bool? homePage, bool animated = true, Route? route}) {
     Map arguments = {
       'target': target,
       'pageType': '$pageType'.split('.').last,
@@ -273,7 +273,7 @@ class DNavigatorManager {
       'animated': animated,
       'identifier': identifierWithRoute(route)
     };
-    DStack.instance.channel!.sendNodeToNative(arguments);
+    return DStack.instance.channel!.sendNodeToNative(arguments);
   }
 
   /// 移除flutter的节点
